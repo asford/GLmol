@@ -2000,7 +2000,7 @@ helix:53-351,440-667,702-830,1053-1137,1172-1270,1447-1525,1588-1660,1668-1904
 surface:
 sphere:
 trace:
-ribbon:
+ribbon:1-2015
 stick:
 line:1-1946,1948-2015
 smallSphere:
@@ -2027,11 +2027,8 @@ bgcolor:000000
     </div>
     -->
 
-    <script src="js/jquery-1.7.min.js" type="text/javascript"></script>
-    <script src="js/Three45.js" type="text/javascript"></script>
-      <!--<script src="ProteinSurface4.js"/></script>-->
-    <script type="text/javascript" src="js/GLmol37.js"></script>
-    <script type="text/javascript" src="js/GLmol_embedding.js"></script>
+    <script src="http://code.jquery.com/jquery-1.7.2.min.js" type="text/javascript"></script>
+    <script type="text/javascript" src="js/GLmol_full.js"></script>
     <script type="text/javascript">
 
 var glmol01 = new GLmol('glmol01', true);
@@ -2060,8 +2057,6 @@ glmol01.rebuildScene = function (repressDraw)
     }
 };
 
-glmol01.parseSS = parseSS
-glmol01.parseRep = parseRep;
 glmol01.defineRepresentation = defineRep;
 glmol01.loadMolecule(true);
 $('#loading').hide();

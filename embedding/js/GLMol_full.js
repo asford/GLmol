@@ -2951,7 +2951,10 @@
     // Representation parsing 
     GLmol.prototype.parseRep = function(parentgroup, str)
     { // TODO: implement!
+        var current_mol = this
+
         var lines = str.split("\n");
+
         var group = new THREE.Object3D();
         var rgroup = new THREE.Object3D();
         rgroup.add(group);
@@ -2961,10 +2964,11 @@
 
         for (var i = 0, lim = lines.length; i < lim; i++)
         {
+            if (lines[i] == "") continue
             var vals = lines[i].split(':');
             if (vals.length < 2)
             {
-              console.log("GLMol Invalid representation line: " + str);
+              console.log("GLMol Invalid representation line: " + lines[i]);
               continue;
             }
 
@@ -2973,9 +2977,11 @@
               continue;
             }
 
+            console.log(vals)
+
             if (!(vals[0] in entries))
             {
-              entries[val[0]] = []
+              entries[vals[0]] = []
             }
 
             entries[vals[0]].push(vals.slice(1))
@@ -2988,13 +2994,14 @@
         {
           $.each(entries["color"], function(i, vals) {
                 var rgb = vals[0].split(',');
-                if (rgb.length != 3) continue;
+                if (rgb.length != 3) return;
                 var c = 0;
                 c += Math.floor((parseFloat(rgb[0]) * 255)) << 16;
                 c += Math.floor((parseFloat(rgb[1]) * 255)) << 8;
                 c += Math.floor(parseFloat(rgb[2]) * 255);
-                var atoms = this.expandSeq(vals[1]);
-                this.colorAtoms(atoms, c);
+
+                var atoms = current_mol.expandSeq(vals[1]);
+                current_mol.colorAtoms(atoms, c);
           });
         }
 
@@ -3012,29 +3019,29 @@
                 {
                     out.push(new THREE.Vector3(parseFloat(points[3 * j]), parseFloat(points[3 * j + 1]), parseFloat(points[3 * j + 2])));
                 }
-                this.drawDottedLines(group, out, color);
+                current_mol.drawDottedLines(group, out, color);
           });
         }
 
         if ('helix' in entries)
         {
           $.each(entries["helix"], function(i, vals) {
-                this.parseSS(vals[0], 'h');
-          }
+                current_mol.parseSS(vals[0], 'h');
+          })
         }
 
         if ('sheet' in entries)
         {
           $.each(entries["sheet"], function(i, vals) {
-                this.parseSS(vals[0], 's');
-          }
+                current_mol.parseSS(vals[0], 's');
+          })
         }
 
         if ('view' in entries)
         {
           $.each(entries["view"], function(i, vals) {
                 var view = vals[0].split(',');
-                if (view.length < 17) continue;
+                if (view.length < 17) return;
                 for (var j = 0; j < 17; j++) view[j] = parseFloat(view[j]);
                 rgroup.matrixAutoUpdate = false;
                 rgroup.matrix.n11 = view[8];
@@ -3049,74 +3056,142 @@
                 group.position.x = view[0];
                 group.position.y = view[1];
                 group.position.z = view[2];
-                this.rotationGroup.position.z = view[3];
-                this.slabNear = view[4];
-                this.slabFar = view[5];
-                this.fogStart = view[6];
-                this.fov = view[7];
-          }
+                current_mol.rotationGroup.position.z = view[3];
+                current_mol.slabNear = view[4];
+                current_mol.slabFar = view[5];
+                current_mol.fogStart = view[6];
+                current_mol.fov = view[7];
+          })
         }
 
         if ('bgcolor' in entries)
         {
           $.each(entries["bgcolor"], function(i, vals) {
-            this.setBackground(vals[0]);
-          }
+            current_mol.setBackground(vals[0]);
+          })
         }
+
         //TODO alexford finish representation parsing.
+        //if ('type' in entries)
+        //{
+          //$.each(entries["type"], function(i, vals) {
+            //if (vals.length == 0) return;
 
-        if ('type' in entries)
+            //var atoms = current_mol.expandSeq(vals[0]);
+            //if (atoms.length == 0) return;
+
+          //})
+        //}
+        
+        if ('sphere' in entries)
         {
-          $.each(entries["type"], function(i, vals) {
-          }
+          $.each(entries["sphere"], function(i, vals) {
+            if (vals.length == 0) return;
+
+            var atoms = current_mol.expandSeq(vals[0]);
+            if (atoms.length == 0) return;
+
+            current_mol.drawAtomsAsSphere(group, atoms);
+          })
         }
 
-        // 2nd pass; parse representations
-        for (var i = 0, lim = lines.length; i < lim; i++)
+        if ('stick' in entries)
         {
-            vals = lines[i].split(':');
-            type = vals[0];
-            if (vals.length < 2) continue;
-            var atoms = this.expandSeq(vals[1]);
-            if (atoms.length == 0) continue;
-            if (type == 'sphere')
-            {
-                this.drawAtomsAsSphere(group, atoms);
-            }
-            else if (type == 'stick')
-            {
-                this.drawBondsAsStick(group, atoms, this.cylinderRadius, this.cylinderRadius, true);
-            }
-            else if (type == 'surface')
-            {
-                //         this.generateMesh(group, atoms, 4);
-            }
-            else if (type == 'ribbon')
-            {
-                this.drawCartoon(group, atoms, this.curveWidth);
-                this.drawCartoonNucleicAcid(group, atoms);
-            }
-            else if (type == 'trace')
-            {
-                this.drawMainchainCurve(group, atoms, this.curveWidth, 'CA', 1);
-                this.drawMainchainCurve(group, atoms, this.curveWidth, 'O3\'', 1);
-            }
-            else if (type == 'line')
-            {
-                this.drawBondsAsLine(group, atoms, this.lineWidth * 2);
-            }
-            else if (type == 'cross')
-            {
-                this.drawAsCross(group, atoms, 0.3);
-            }
-            else if (type == 'smallSphere')
-            {
-                this.drawAtomsAsSphere(group, atoms, 0.3, true);
-            }
-            else if (type == 'sphere')
-            {
-                this.drawAtomsAsSphere(group, atoms, this.sphereRadius, false);
-            }
+          $.each(entries["stick"], function(i, vals) {
+            if (vals.length == 0) return;
+
+            var atoms = current_mol.expandSeq(vals[0]);
+            if (atoms.length == 0) return;
+
+            current_mol.drawBondsAsStick(group, atoms, current_mol.cylinderRadius, current_mol.cylinderRadius, true);
+          })
+        }
+
+        if ('surface' in entries)
+        {
+          $.each(entries["surface"], function(i, vals) {
+            if (vals.length == 0) return;
+
+            var atoms = current_mol.expandSeq(vals[0]);
+            if (atoms.length == 0) return;
+
+            //         current_mol.generateMesh(group, atoms, 4);
+          })
+        }
+
+        if ('ribbon' in entries)
+        {
+          $.each(entries["ribbon"], function(i, vals) {
+            if (vals.length == 0) return;
+
+            var atoms = current_mol.expandSeq(vals[0]);
+            if (atoms.length == 0) return;
+
+            current_mol.drawCartoon(group, atoms, current_mol.curveWidth);
+            current_mol.drawCartoonNucleicAcid(group, atoms);
+
+          })
+        }
+
+        if ('trace' in entries)
+        {
+          $.each(entries["trace"], function(i, vals) {
+            if (vals.length == 0) return;
+
+            var atoms = current_mol.expandSeq(vals[0]);
+            if (atoms.length == 0) return;
+
+            current_mol.drawMainchainCurve(group, atoms, current_mol.curveWidth, 'CA', 1);
+            current_mol.drawMainchainCurve(group, atoms, current_mol.curveWidth, 'O3\'', 1);
+          })
+        }
+
+        if ('line' in entries)
+        {
+          $.each(entries["line"], function(i, vals) {
+            if (vals.length == 0) return;
+
+            var atoms = current_mol.expandSeq(vals[0]);
+            if (atoms.length == 0) return;
+
+            current_mol.drawBondsAsLine(group, atoms, current_mol.lineWidth * 2);
+          })
+        }
+
+        if ('cross' in entries)
+        {
+          $.each(entries["cross"], function(i, vals) {
+            if (vals.length == 0) return;
+
+            var atoms = current_mol.expandSeq(vals[0]);
+            if (atoms.length == 0) return;
+
+            current_mol.drawAsCross(group, atoms, 0.3);
+          })
+        }
+
+        if ('smallSphere' in entries)
+        {
+          $.each(entries["smallSphere"], function(i, vals) {
+            if (vals.length == 0) return;
+
+            var atoms = current_mol.expandSeq(vals[0]);
+            if (atoms.length == 0) return;
+
+            current_mol.drawAtomsAsSphere(group, atoms, 0.3, true);
+          })
+        }
+
+        if ('spheres' in entries)
+        {
+          $.each(entries["spheres"], function(i, vals) {
+            if (vals.length == 0) return;
+
+            var atoms = current_mol.expandSeq(vals[0]);
+            if (atoms.length == 0) return;
+
+            current_mol.drawAtomsAsSphere(group, atoms, current_mol.sphereRadius, false);
+          })
         }
     };
 
