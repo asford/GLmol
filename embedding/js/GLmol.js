@@ -2151,7 +2151,7 @@ GLmol.prototype.loadMoleculeStr = function (repressZoom, source) {
 
 // Representation parsing 
 GLmol.prototype.parseRep = function(parentgroup, str)
-{ // TODO: implement!
+{
     var current_mol = this
 
     var lines = str.split("\n");
@@ -2408,11 +2408,7 @@ GLmol.prototype.parseSS = function(str, ss)
 
     for (var i = 0, lim = ranges.length; i < lim; i++)
     {
-        var tmp = ranges[i].split('-');
-        if (tmp.length == 1) tmp[1] = tmp[0];
-
-        var start = parseInt(tmp[0]),
-            end = parseInt(tmp[1]);
+        var start = ranges[i][0], end = ranges[i][1];
 
         console.log("parseSS start: " + start + " end: " + end);
 
@@ -2433,11 +2429,24 @@ GLmol.prototype.parseSelectionToAtomRanges = function(str)
 {
   var match;
 
-  match = /^atom\s*([\d-,]+)$/.exec(str);
+  match = /^\s*atom\s*([\d-,]+)$/.exec(str);
   if (match)
   {
     seq = match[1];
-    return seq.split(","); 
+    return seq.split(",").map(this.parseRange); 
+  }
+
+  match = /^\s*resi(due)?\s*([\d-,]+)$/.exec(str);
+  if (match)
+  {
+    return match[2].split(",").map(this.parseRange).map(
+        function (residue_range) {
+          var start = residue_range[0], end = residue_range[1];
+          atoms_in_range = this.atoms.filter(
+                function (atom) { return (atom.resi < start) | (atom.resi > end); });
+
+          return [atoms_in_range[0].serial, atoms_in_range[atoms_in_range.length - 1].serial]
+        });
   }
 }
 
@@ -2448,25 +2457,51 @@ GLmol.prototype.parseSelectionToAtomList = function(str)
 {
   var match;
 
-  match = /^atom\s*([\d-,]+)$/.exec(str);
+  match = /^\s*atom\s*([\d-,]+)$/.exec(str);
   if (match)
   {
     seq = match[1];
     return this.expandSeq(seq)
   }
+
+  match = /^\s*resi(due)?\s*([\d-,]+)$/.exec(str);
+  if (match)
+  {
+    residue_list = this.expandSeq(match[2]);
+    console.log("parseSelectionToAtomList residues: " + residue_list);
+    return this.atoms.filter(
+              function (atom) { return (residue_list.indexOf(atom.resi) != -1); }
+            ).map(getAtomSerial);
+  }
+}
+
+GLmol.prototype.parseRange = function(range_str)
+{
+  var tmp = range_str.split("-");
+  if (tmp.length == 1)
+  {
+    tmp.push(tmp[0]);
+  }
+
+  tmp[0] = parseInt(tmp[0]);
+  tmp[1] = parseInt(tmp[1]);
+  
+  return tmp;
 }
 
 GLmol.prototype.expandSeq = function(str)
 {
     var nums = str.split(',');
-    var ret = []
+    var ret = [];
+
     for (var i = 0, lim = nums.length; i < lim; i++)
     {
-        var tmp = nums[i].split('-');
-        if (tmp.length == 1) tmp.push(tmp[0]);
-        tmp[0] = parseInt(tmp[0]);
-        tmp[1] = parseInt(tmp[1]);
-        for (var j = tmp[0]; j <= tmp[1]; j++) ret.push(j);
+      var tmp = this.parseRange(nums[i]);
+
+      for (var j = tmp[0]; j <= tmp[1]; j++)
+      {
+        ret.push(j);
+      }
     }
     return ret;
 }
