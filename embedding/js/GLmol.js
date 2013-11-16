@@ -2201,7 +2201,7 @@ GLmol.prototype.parseRep = function(parentgroup, str)
             c += Math.floor((parseFloat(rgb[1]) * 255)) << 8;
             c += Math.floor(parseFloat(rgb[2]) * 255);
 
-            var atoms = current_mol.expandSeq(vals[1]);
+            var atoms = current_mol.parseSelectionToAtomList(vals[1]);
             current_mol.colorAtoms(atoms, c);
       });
     }
@@ -2278,7 +2278,7 @@ GLmol.prototype.parseRep = function(parentgroup, str)
       //$.each(entries["type"], function(i, vals) {
         //if (vals.length == 0) return;
 
-        //var atoms = current_mol.expandSeq(vals[0]);
+        //var atoms = current_mol.parseSelectionToAtomList(vals[0]);
         //if (atoms.length == 0) return;
 
       //})
@@ -2289,7 +2289,7 @@ GLmol.prototype.parseRep = function(parentgroup, str)
       $.each(entries["sphere"], function(i, vals) {
         if (vals.length == 0) return;
 
-        var atoms = current_mol.expandSeq(vals[0]);
+        var atoms = current_mol.parseSelectionToAtomList(vals[0]);
         if (atoms.length == 0) return;
 
         current_mol.drawAtomsAsSphere(group, atoms);
@@ -2301,7 +2301,7 @@ GLmol.prototype.parseRep = function(parentgroup, str)
       $.each(entries["stick"], function(i, vals) {
         if (vals.length == 0) return;
 
-        var atoms = current_mol.expandSeq(vals[0]);
+        var atoms = current_mol.parseSelectionToAtomList(vals[0]);
         if (atoms.length == 0) return;
 
         current_mol.drawBondsAsStick(group, atoms, current_mol.cylinderRadius, current_mol.cylinderRadius, true);
@@ -2313,7 +2313,7 @@ GLmol.prototype.parseRep = function(parentgroup, str)
       $.each(entries["surface"], function(i, vals) {
         if (vals.length == 0) return;
 
-        var atoms = current_mol.expandSeq(vals[0]);
+        var atoms = current_mol.parseSelectionToAtomList(vals[0]);
         if (atoms.length == 0) return;
 
         //         current_mol.generateMesh(group, atoms, 4);
@@ -2325,7 +2325,7 @@ GLmol.prototype.parseRep = function(parentgroup, str)
       $.each(entries["ribbon"], function(i, vals) {
         if (vals.length == 0) return;
 
-        var atoms = current_mol.expandSeq(vals[0]);
+        var atoms = current_mol.parseSelectionToAtomList(vals[0]);
         if (atoms.length == 0) return;
 
         current_mol.drawCartoon(group, atoms, current_mol.curveWidth);
@@ -2339,7 +2339,7 @@ GLmol.prototype.parseRep = function(parentgroup, str)
       $.each(entries["trace"], function(i, vals) {
         if (vals.length == 0) return;
 
-        var atoms = current_mol.expandSeq(vals[0]);
+        var atoms = current_mol.parseSelectionToAtomList(vals[0]);
         if (atoms.length == 0) return;
 
         current_mol.drawMainchainCurve(group, atoms, current_mol.curveWidth, 'CA', 1);
@@ -2352,7 +2352,7 @@ GLmol.prototype.parseRep = function(parentgroup, str)
       $.each(entries["line"], function(i, vals) {
         if (vals.length == 0) return;
 
-        var atoms = current_mol.expandSeq(vals[0]);
+        var atoms = current_mol.parseSelectionToAtomList(vals[0]);
         if (atoms.length == 0) return;
 
         current_mol.drawBondsAsLine(group, atoms, current_mol.lineWidth * 2);
@@ -2364,7 +2364,7 @@ GLmol.prototype.parseRep = function(parentgroup, str)
       $.each(entries["cross"], function(i, vals) {
         if (vals.length == 0) return;
 
-        var atoms = current_mol.expandSeq(vals[0]);
+        var atoms = current_mol.parseSelectionToAtomList(vals[0]);
         if (atoms.length == 0) return;
 
         current_mol.drawAsCross(group, atoms, 0.3);
@@ -2376,7 +2376,7 @@ GLmol.prototype.parseRep = function(parentgroup, str)
       $.each(entries["smallSphere"], function(i, vals) {
         if (vals.length == 0) return;
 
-        var atoms = current_mol.expandSeq(vals[0]);
+        var atoms = current_mol.parseSelectionToAtomList(vals[0]);
         if (atoms.length == 0) return;
 
         current_mol.drawAtomsAsSphere(group, atoms, 0.3, true);
@@ -2388,7 +2388,7 @@ GLmol.prototype.parseRep = function(parentgroup, str)
       $.each(entries["spheres"], function(i, vals) {
         if (vals.length == 0) return;
 
-        var atoms = current_mol.expandSeq(vals[0]);
+        var atoms = current_mol.parseSelectionToAtomList(vals[0]);
         if (atoms.length == 0) return;
 
         current_mol.drawAtomsAsSphere(group, atoms, current_mol.sphereRadius, false);
@@ -2399,31 +2399,62 @@ GLmol.prototype.parseRep = function(parentgroup, str)
 GLmol.prototype.parseSS = function(str, ss)
 {
     console.log("parseSS str:" + str);
-    var nums = str.split(',');
+    var ranges = this.parseSelectionToAtomRanges(str)
     var ret = []
     var atoms = this.atoms;
 
     console.log("parseSS ss:" + ss);
-    console.log("parseSS nums:" + nums);
-    console.log("parseSS atoms:" + atoms)
+    console.log("parseSS ranges:" + ranges);
 
-    for (var i = 0, lim = nums.length; i < lim; i++)
+    for (var i = 0, lim = ranges.length; i < lim; i++)
     {
-      console.log("parseSS i:" + i)
-      console.log("parseSS lim:" + lim)
-        var tmp = nums[i].split('-');
+        var tmp = ranges[i].split('-');
         if (tmp.length == 1) tmp[1] = tmp[0];
 
         var start = parseInt(tmp[0]),
             end = parseInt(tmp[1]);
+
+        console.log("parseSS start: " + start + " end: " + end);
+
         for (var j = start; j <= end; j++)
         {
             if (atoms[j]) atoms[j].ss = ss;
         }
+
         if (atoms[start]) atoms[start].ssbegin = true;
         if (atoms[end]) atoms[end].ssend = true;
     }
 };
+
+// Parse atom selection of the form:
+// id - x or x-y range
+// atom<id> - atom number selection
+GLmol.prototype.parseSelectionToAtomRanges = function(str)
+{
+  var match;
+
+  match = /^atom\s*([\d-,]+)$/.exec(str);
+  if (match)
+  {
+    seq = match[1];
+    return seq.split(","); 
+  }
+}
+
+// Parse atom selection of the form:
+// id - x or x-y range
+// atom<id> - atom number selection
+GLmol.prototype.parseSelectionToAtomList = function(str)
+{
+  var match;
+
+  match = /^atom\s*([\d-,]+)$/.exec(str);
+  if (match)
+  {
+    seq = match[1];
+    return this.expandSeq(seq)
+  }
+}
 
 GLmol.prototype.expandSeq = function(str)
 {
