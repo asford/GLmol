@@ -2618,7 +2618,7 @@ GLmol.prototype.enableMouse = function () {
         pmvMatInv = new THREE.Matrix4().getInverse(pmvMat);
         tx = x / me.WIDTH * 2 - 1;
         ty = 1 - y / me.HEIGHT * 2;
-        nearest = [1, {}, new TV3(0, 0, 1000)];
+        nearest = [1, false, new TV3(0, 0, 1000)];
         for (i = 0, ilim = me.atoms.length; i < ilim; i++) {
             atom = me.atoms[i];
             if (!atom) { continue; }
@@ -2633,7 +2633,10 @@ GLmol.prototype.enableMouse = function () {
             if (r2 < nearest[0]) { nearest = [r2, atom, v]; }
         }
         atom = nearest[1];
+
         if (!atom) { return; }
+        console.log(atom);
+
         bb = me.billboard(me.createTextTex(atom.chain + ":" + atom.resn + ":" + atom.resi, "30", "#ffffff"));
         console.log(bb);
         bb.position.set(atom.x, atom.y, atom.z);
