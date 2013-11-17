@@ -2194,12 +2194,17 @@ GLmol.prototype.parseRep = function(parentgroup, str)
     if ('color' in entries)
     {
       $.each(entries["color"], function(i, vals) {
-            var rgb = vals[0].split(',');
-            if (rgb.length != 3) return;
+            var rgb = parseCSSColor(vals[0]);
+            if (rgb == null)
+            {
+              console.log("Unable to parse color: " + vals[0]);
+              return;
+            }
+
             var c = 0;
-            c += Math.floor((parseFloat(rgb[0]) * 255)) << 16;
-            c += Math.floor((parseFloat(rgb[1]) * 255)) << 8;
-            c += Math.floor(parseFloat(rgb[2]) * 255);
+            c += rgb[0] << 16;
+            c += rgb[1] << 8;
+            c += rgb[2];
 
             var atoms = current_mol.parseSelectionToAtomList(vals[1]);
             current_mol.colorAtoms(atoms, c);
