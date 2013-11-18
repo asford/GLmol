@@ -43,10 +43,18 @@ class PDBEmbed(object):
 
         console.log("Loaded GLmol as id: %(embed_id)s.");
 
-        function defineRep()
+        function parseAndDefineRepresentation()
           {
-              this.colorByAtom(this.getAllAtoms());
+              var all = this.getAllAtoms(),
+                  hetatm = this.getHetatms(all).filter(this.isNotSolvent);
+
+              this.colorByChain(all, true);
+              this.colorByAtom(this.atoms.filter(this.propertyIsnt("elem", "C")), {});
+
               this.parseRep(this.modelGroup, $('#%(embed_id)s_rep').val());
+
+              this.drawAtomsAsSphere(this.modelGroup, hetatm, this.sphereRadius);
+              this.drawCartoon(this.modelGroup, all, this.curveWidth);
           }
 
         %(embed_id)s.rebuildScene = function (repressDraw)
@@ -70,7 +78,7 @@ class PDBEmbed(object):
               }
           };
 
-        %(embed_id)s.defineRepresentation = defineRep;
+        %(embed_id)s.defineRepresentation = parseAndDefineRepresentation;
         %(embed_id)s.loadMolecule(true);
 
         $.data(element.children()[0], "glmol", %(embed_id)s)
