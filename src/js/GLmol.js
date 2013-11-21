@@ -2472,10 +2472,12 @@ GLmol.prototype.parseSelectionToAtomRanges = function(str)
   match = /^\s*resi(due)?\s*([\d-,]+)$/.exec(str);
   if (match)
   {
+    //TODO alexford Update, performs many passes when individual residue numbers are specified.
+    var current_mol = this;
     return match[2].split(",").map(this.parseRange).map(
         function (residue_range) {
           var start = residue_range[0], end = residue_range[1];
-          atoms_in_range = this.atoms.filter(
+          atoms_in_range = current_mol.atoms.filter(
                 function (atom) { return (atom.resi < start) | (atom.resi > end); });
 
           return [atoms_in_range[0].serial, atoms_in_range[atoms_in_range.length - 1].serial]
