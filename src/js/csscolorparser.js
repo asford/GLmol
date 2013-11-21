@@ -196,5 +196,3 @@ function parseCSSColor(css_str) {
 
   return null;
 }
-
-try { exports.parseCSSColor = parseCSSColor } catch(e) { }
