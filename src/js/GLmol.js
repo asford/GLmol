@@ -2163,13 +2163,17 @@ GLmol.prototype.initializeScene = function () {
     this.setupLights(this.scene);
 };
 
-GLmol.prototype.zoomInto = function (atomlist, keepSlab) {
+GLmol.prototype.zoomInto = function (atomlist, keepSlab) 
+{
+    console.log("zoomInto", atomlist); 
     var tmp = this.getExtent(atomlist),
         center = new TV3(tmp[2][0], tmp[2][1], tmp[2][2]),
         x,
         y,
         z,
         maxD;
+
+    console.log("zoomCenter", center); 
 
     if (this.protein.appliedMatrix) {
         center = this.protein.appliedMatrix.multiplyVector3(center);
@@ -2232,8 +2236,15 @@ GLmol.prototype.loadMoleculeStr = function (repressZoom, source) {
     if (title) { title.innerHTML = titleStr; }// jQ's method is more thorough
 
     this.rebuildScene(true);
-    if (!repressZoom) {
+
+    if (!repressZoom)
+    {
+        console.log("no repressZoom");
         this.zoomInto(this.getAllAtoms());
+    }
+    else
+    {
+      console.log("repressZoom");
     }
 
     this.show();
@@ -2277,8 +2288,6 @@ GLmol.prototype.parseRep = function(parentgroup, str)
 
         entries[vals[0]].push(vals.slice(1))
     }
-
-
 
     // parse colors and dists
     if ('color' in entries)
@@ -2476,6 +2485,32 @@ GLmol.prototype.parseRep = function(parentgroup, str)
 
         current_mol.drawAtomsAsSphere(group, atoms, current_mol.sphereRadius, false);
       })
+    }
+
+    // parse zoom entries or zoom into all atoms
+    if ('zoom' in entries)
+    {
+      var zoom_atoms = {}
+
+      $.each(entries["zoom"], function(i, vals) {
+            var atoms = current_mol.parseSelectionToAtomList(vals[0]);
+            for (var a in atoms)
+            {
+              zoom_atoms[atoms[a]] = true;
+            }
+      });
+
+      var zoom_atom_list = [];
+      for (var a in zoom_atoms)
+      {
+        zoom_atom_list.push(a);
+      }
+
+      this.zoomInto(zoom_atom_list);
+    }
+    else
+    {
+      this.zoomInto(this.getAllAtoms());
     }
 };
 
