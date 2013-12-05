@@ -550,12 +550,28 @@ GLmol.prototype.drawAtomsAsIcosahedron = function (group, atomlist, defaultRadiu
     this.drawAtoms(geometry, group, atomlist, defaultRadius, forceDefault, scale);
 };
 
-GLmol.prototype.isConnected = function (atom1, atom2) {
-    var s = atom1.bonds.indexOf(atom2.serial),
-        distSquared;
-    if (s !== -1) { return atom1.bondOrder[s]; }
+GLmol.prototype.isConnected = function (atom1, atom2) 
+{
+    //Explicit bond entries
+    var s = atom1.bonds.indexOf(atom2.serial);
+    if (s !== -1)
+    {
+      return atom1.bondOrder[s];
+    }
 
-    if (this.protein.smallMolecule && (atom1.hetflag || atom2.hetflag)) { return 0; } // CHECK: or should I ?
+    var distSquared;
+
+    // Skip bond detection on hetatoms and small molecules
+    if (this.protein.smallMolecule && (atom1.hetflag || atom2.hetflag))
+    {
+      return 0;
+    }
+
+    // Skip cross-chain bond detection unless looking at potential disulfide
+    if ((atom1.chaini != atom2.chaini) && ((atom1.elem != "S") || (atom2.elem != "S")))
+    {
+      return 0;
+    }
 
     distSquared = (atom1.x - atom2.x) * (atom1.x - atom2.x) +
                   (atom1.y - atom2.y) * (atom1.y - atom2.y) +
