@@ -2496,7 +2496,7 @@ GLmol.prototype.parseSelectionToAtomRanges = function(str)
 {
   var match;
 
-  match = /^\s*atom\s*([\d-,]+)$/.exec(str);
+  match = /^\s*atom(i)?\s*([\d-,]+)$/.exec(str);
   if (match)
   {
     return match[1].split(",").map(this.parseRange); 
@@ -2530,17 +2530,31 @@ GLmol.prototype.parseSelectionToAtomList = function(str)
   }
   console.log(selection);
 
-  var selection_values = { };
-  for (var v in this.expandSeq(selection.sequence))
-  {
-    selection_values[v] = true;
-  }
+  selection_atoms = this.atoms;
 
-  var selection_atoms = this.atoms.filter(function (atom) { return selection_values[atom[selection.selection_type]]; });
+  if(selection.selection_type != "all")
+  {
+    var selection_values = { };
+    var expanded_sequence = this.expandSeq(selection.sequence);
+    for (var v in expanded_sequence)
+    {
+      selection_values[expanded_sequence[v]] = true;
+    }
+
+    console.log("Expanded selection.sequence:", selection.sequence, selection_values);
+
+    selection_atoms = this.atoms.filter(function (atom) { return selection_values[atom[selection.selection_type]]; });
+  }
 
   for (var modifier in selection.modifiers)
   {
     modifier = selection.modifiers[modifier];
+
+    if(modifier == "elem C")
+    {
+      selection_atoms = selection_atoms.filter(function (atom) { return atom["elem"] == "C";});
+    }
+
     if(modifier == "bb")
     {
       var bb_atoms = {"C" : true, "CA" : true, "N" : true, "O" : true};
@@ -2558,35 +2572,34 @@ GLmol.prototype.parseSelectionToAtomList = function(str)
 
 GLmol.prototype.parseSelectionStatement = function(str)
 {
+
   var selection_types = {};
-  selection_types["resi"] = /resi(due)?/;
-  selection_types["serial"] = /atomi/;
-  selection_types["chaini"] = /chaini/;
+  selection_types["resi"] = /resi(due)?\s+([\d-,]+)/;
+  selection_types["serial"] = /atomi()?\s+([\d-,]+)/;
+  selection_types["chaini"] = /chaini()?\s+([\d-,]+)/;
 
-  var match = /^\s*((\w+\s)*)([\d-,]+)$/.exec(str)
-  if (!match)
-  {
-    console.log("Unable to parse selection:", str);
-  }
-
-  var keywords = match[1].split(/\s+/);
-  var sequence = match[3];
+  var entries = str.replace(/^\s\s*/, '').replace(/\s\s*$/, '').split(/\s*;\s*/);
 
   var selection_type = null;
+  var sequence = null;
   var modifiers = [];
 
-  for (var k in keywords)
+  for (var e in entries)
   {
-    k = keywords[k];
+    e = entries[e];
+
     var is_selection = false;
 
     for (var s in selection_types)
     {
-      if(selection_types[s].exec(k))
+      var match = selection_types[s].exec(e);
+
+      if(match)
       {
         if(!selection_type)
         {
-          selection_type = k;
+          selection_type = s;
+          sequence = match[2];
           is_selection = true;
           break;
         }
@@ -2598,10 +2611,23 @@ GLmol.prototype.parseSelectionStatement = function(str)
       }
     }
 
+    if(e == "all")
+    {
+        if(!selection_type)
+        {
+          selection_type = "all";
+        }
+        else
+        {
+          console.log("Duplication selection type in selection statement:", str);
+          return;
+        }
+    }
+
     // Selection type will be set if found, otherwise is modifier.
     if(!is_selection)
     {
-      modifiers.push(k);
+      modifiers.push(e);
     }
   }
 
