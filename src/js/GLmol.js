@@ -163,6 +163,31 @@ GLmol.prototype.setupLights = function (scene) {
     scene.add(ambientLight);
 };
 
+GLmol.prototype.elemFromAtomName = function (atom_name)
+{
+  if(atom_name.indexOf("C") != -1)
+  {
+    return "C";
+  }
+
+  if(atom_name.indexOf("O") != -1)
+  {
+    return "O";
+  }
+
+  if(atom_name.indexOf("N") != -1)
+  {
+    return "N";
+  }
+
+  if(atom_name.indexOf("H") != -1)
+  {
+    return "H";
+  }
+
+  return atom_name;
+};
+
 GLmol.prototype.parseSDF = function (str) {
     var atoms = this.atoms,
         protein = this.protein,
@@ -293,7 +318,7 @@ GLmol.prototype.parsePDB2 = function (str) {
 
             if (elem === '') {
               // For PDB files missing element records use the atom name record
-              elem = line.substr(12, 4).replace(/ /g, "");
+              elem = this.elemFromAtomName(atom);
             }
 
             
