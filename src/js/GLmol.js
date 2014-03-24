@@ -275,8 +275,8 @@ GLmol.prototype.parsePDB2 = function (str) {
 
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i].replace(/^\s*/, ''); // remove indent
-        var recordName = line.substr(0, 6);
-        if (recordName === 'ATOM  ' || recordName === 'HETATM') 
+        var recordName = line.substr(0, 6).trim();
+        if (recordName === 'ATOM' || recordName === 'HETATM') 
         {
           // Atom properties
           var serial  = parseInt(line.substr(6, 5), 10),
@@ -327,12 +327,12 @@ GLmol.prototype.parsePDB2 = function (str) {
 
             prev_atom = atoms[serial];
         }
-        else if (recordName === 'TER   ')
+        else if (recordName === 'TER')
         {
           // Increment chaini on TER records
           current_chaini += 1;
         }
-        else if (recordName === 'SHEET ')
+        else if (recordName === 'SHEET')
         {
             var startChain = line.substr(21, 1);
             var startResi = parseInt(line.substr(22, 4), 10);
@@ -340,7 +340,7 @@ GLmol.prototype.parsePDB2 = function (str) {
             var endResi = parseInt(line.substr(33, 4), 10);
             protein.sheet.push([startChain, startResi, endChain, endResi]);
         }
-        else if (recordName === 'HELIX ')
+        else if (recordName === 'HELIX')
         {
             var startChain = line.substr(19, 1);
             var startResi = parseInt(line.substr(21, 4), 10);
@@ -408,7 +408,7 @@ GLmol.prototype.parsePDB2 = function (str) {
         {
             protein.pdbID = line.substr(62, 4);
         }
-        else if (recordName === 'TITLE ') 
+        else if (recordName === 'TITLE') 
         {
             if (!protein.title) {
                 protein.title = "";
@@ -450,6 +450,8 @@ GLmol.prototype.parsePDB2 = function (str) {
         }
     }
     protein.smallMolecule = false;
+
+    console.log("parsePDB2 atoms:", atoms)
     return true;
 };
 
