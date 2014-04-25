@@ -294,9 +294,8 @@ GLmol.prototype.parsePDB2 = function (str) {
     var lines = str.split("\n");
 
     var prev_atom = null;
-    var current_chaini = 0;
-
-
+    var current_chain_number = 0;
+    var current_residue_number = 0;
 
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i].replace(/^\s*/, ''); // remove indent
@@ -322,10 +321,16 @@ GLmol.prototype.parsePDB2 = function (str) {
             }
 
             
+            // If starting a new chain by id increment the chain_number
             if ((prev_atom != null) && (chain != prev_atom["chain"]))
             {
-              // If starting a new chain by id increment the chaini
-              current_chaini += 1;
+              current_chain_number += 1;
+            }
+
+            // If starting a new chain or resi by id increment the residue_number
+            if ((prev_atom != null) && (chain != prev_atom["chain"] || resi != prev_atom["resi"]))
+            {
+              current_residue_number += 1;
             }
 
             atoms[serial] = {
@@ -337,8 +342,9 @@ GLmol.prototype.parsePDB2 = function (str) {
 
               'hetflag'   : hetflag,
               'chain'     : chain,
-              'chaini'    : current_chaini,
+              'chain_number'    : current_chain_number,
               'resi'      : resi,
+              "residue_number" : current_residue_number,
               'serial'    : serial,
               'atom'      : atom,
 
@@ -354,8 +360,9 @@ GLmol.prototype.parsePDB2 = function (str) {
         }
         else if (recordName === 'TER')
         {
-          // Increment chaini on TER records
-          current_chaini += 1;
+          // Increment chain and residue number on TER records
+          current_chain_number += 1;
+          current_residue_number += 1;
         }
         else if (recordName === 'SHEET')
         {
@@ -595,7 +602,7 @@ GLmol.prototype.isConnected = function (atom1, atom2)
     }
 
     // Skip cross-chain bond detection unless looking at potential disulfide
-    if ((atom1.chaini != atom2.chaini) && ((atom1.elem != "S") || (atom2.elem != "S")))
+    if ((atom1.chain_number != atom2.chain_number) && ((atom1.elem != "S") || (atom2.elem != "S")))
     {
       return 0;
     }
@@ -1036,7 +1043,7 @@ GLmol.prototype.drawSmoothTube = function (group, _points, colors, radii) {
 GLmol.prototype.drawMainchainCurve = function (group, atomlist, curveWidth, atomName, div) {
     var points = [],
         colors = [],
-        current_chaini,
+        current_chain_number,
         current_resi,
         i,
         atom;
@@ -1051,7 +1058,7 @@ GLmol.prototype.drawMainchainCurve = function (group, atomlist, curveWidth, atom
 
             if ((atom.atom === atomName))
             {
-                if (current_chaini !== atom.chaini || current_resi + 1 !== atom.resi) {
+                if (current_chain_number !== atom.chain_number || current_resi + 1 !== atom.resi) {
                     this.drawSmoothCurve(group, points, curveWidth, colors, div);
                     points = [];
                     colors = [];
@@ -1059,7 +1066,7 @@ GLmol.prototype.drawMainchainCurve = function (group, atomlist, curveWidth, atom
                 points.push(new TV3(atom.x, atom.y, atom.z));
 
                 colors.push(atom.color);
-                current_chaini = atom.chaini;
+                current_chain_number = atom.chain_number;
                 current_resi = atom.resi;
             }
         }
@@ -1071,7 +1078,7 @@ GLmol.prototype.drawMainchainTube = function (group, atomlist, atomName, radius)
     var points = [],
         colors = [],
         radii = [],
-        current_chaini,
+        current_chain_number,
         currentResi,
         i,
         atom;
@@ -1083,7 +1090,7 @@ GLmol.prototype.drawMainchainTube = function (group, atomlist, atomName, radius)
             atom = atomlist[i];
 
             if (atom.atom === atomName) {
-                if (current_chaini !== atom.chaini || currentResi + 1 !== atom.resi) {
+                if (current_chain_number !== atom.chain_number || currentResi + 1 !== atom.resi) {
                     this.drawSmoothTube(group, points, colors, radii);
                     points = [];
                     colors = [];
@@ -1097,7 +1104,7 @@ GLmol.prototype.drawMainchainTube = function (group, atomlist, atomName, radius)
                 }
 
                 colors.push(atom.color);
-                current_chaini = atom.chaini;
+                current_chain_number = atom.chain_number;
                 currentResi = atom.resi;
             }
         }
@@ -1233,10 +1240,10 @@ GLmol.prototype.drawCylinder = function (group, from, to, radius, color, cap) {
 };
 
 // FIXME: transition!
-// FIXME: current_chaini not used to detect breaks
+// FIXME: current_chain_number not used to detect breaks
 GLmol.prototype.drawHelixAsCylinder = function (group, atomlist, radius) {
     var start = null,
-        current_chaini,
+        current_chain_number,
         current_resi,
         others = [],
         beta = [],
@@ -1255,7 +1262,7 @@ GLmol.prototype.drawHelixAsCylinder = function (group, atomlist, radius) {
                 if (start !== null) { this.drawCylinder(group, new TV3(start.x, start.y, start.z), new TV3(atom.x, atom.y, atom.z), radius, atom.color, true); }
                 start = null;
             }
-            current_chaini = atom.chaini;
+            current_chain_number = atom.chain_number;
             current_resi = atom.resi;
             if (start === null && atom.ss === 'h' && atom.ssbegin) { start = atom; }
         }
@@ -1278,7 +1285,7 @@ GLmol.prototype.drawStrand = function (group, atomlist, num, div, fill, coilWidt
 
     var points = [],
         colors = [],
-        current_chaini,
+        current_chain_number,
         current_resi,
         currentCA,
         prevCO = null,
@@ -1303,7 +1310,7 @@ GLmol.prototype.drawStrand = function (group, atomlist, num, div, fill, coilWidt
 
             if ((atom.atom === 'O' || atom.atom === 'CA') && !atom.hetflag) {
                 if (atom.atom === 'CA') {
-                    if (current_chaini !== atom.chaini || current_resi + 1 !== atom.resi) {
+                    if (current_chain_number !== atom.chain_number || current_resi + 1 !== atom.resi) {
                         for (j = 0; !thickness && j < num; j++) {
                             this.drawSmoothCurve(group, points[j], 1, colors, div);
                         }
@@ -1319,7 +1326,7 @@ GLmol.prototype.drawStrand = function (group, atomlist, num, div, fill, coilWidt
                         ssborder = false;
                     }
                     currentCA = new TV3(atom.x, atom.y, atom.z);
-                    current_chaini = atom.chaini;
+                    current_chain_number = atom.chain_number;
                     current_resi = atom.resi;
                     ss = atom.ss;
                     ssborder = atom.ssstart || atom.ssend;
@@ -1394,7 +1401,7 @@ GLmol.prototype.drawNucleicAcidLadder = function (group, atomlist) {
     var geo = new THREE.Geometry(),
         lineGeo = new THREE.Geometry(),
         baseAtoms = ["N1", "C2", "N3", "C4", "C5", "C6", "N9", "C8", "N7"],
-        current_chaini,
+        current_chain_number,
         current_resi,
         currentComponent = new Array(baseAtoms.length),
         color = new TCo(0xcc0000),
@@ -1410,7 +1417,7 @@ GLmol.prototype.drawNucleicAcidLadder = function (group, atomlist) {
         if (atomlist.hasOwnProperty(i)) {
             atom = atomlist[i];
 
-            if (atom.resi !== current_resi || atom.chaini !== current_chaini) {
+            if (atom.resi !== current_resi || atom.chain_number !== current_chain_number) {
                 this.drawNucleicAcidLadderSub(geo, lineGeo, currentComponent, color);
                 currentComponent = new Array(baseAtoms.length);
             }
@@ -1422,7 +1429,7 @@ GLmol.prototype.drawNucleicAcidLadder = function (group, atomlist) {
                 color = new TCo(atom.color);
             }
             current_resi = atom.resi;
-            current_chaini = atom.chaini;
+            current_chain_number = atom.chain_number;
         }
     }
 
@@ -1435,7 +1442,7 @@ GLmol.prototype.drawNucleicAcidLadder = function (group, atomlist) {
 };
 
 GLmol.prototype.drawNucleicAcidStick = function (group, atomlist) {
-    var current_chaini,
+    var current_chain_number,
         current_resi,
         start = null,
         end = null,
@@ -1448,7 +1455,7 @@ GLmol.prototype.drawNucleicAcidStick = function (group, atomlist) {
         if (atomlist.hasOwnProperty(i)) {
             atom = atomlist[i];
 
-            if (atom.resi !== current_resi || atom.chaini !== current_chaini) {
+            if (atom.resi !== current_resi || atom.chain_number !== current_chain_number) {
                 if (start !== null && end !== null) {
                     this.drawCylinder(group, new TV3(start.x, start.y, start.z), new TV3(end.x, end.y, end.z), 0.3, start.color, true);
                 }
@@ -1466,7 +1473,7 @@ GLmol.prototype.drawNucleicAcidStick = function (group, atomlist) {
                 end = atom;
             }
             current_resi = atom.resi;
-            current_chaini = atom.chaini;
+            current_chain_number = atom.chain_number;
         }
     }
     if (start !== null && end !== null) {
@@ -1475,7 +1482,7 @@ GLmol.prototype.drawNucleicAcidStick = function (group, atomlist) {
 };
 
 GLmol.prototype.drawNucleicAcidLine = function (group, atomlist) {
-    var current_chaini,
+    var current_chain_number,
         current_resi,
         start = null,
         end = null,
@@ -1492,7 +1499,7 @@ GLmol.prototype.drawNucleicAcidLine = function (group, atomlist) {
 
             atom = atomlist[i];
 
-            if (atom.resi !== current_resi || atom.chaini !== current_chaini) {
+            if (atom.resi !== current_resi || atom.chain_number !== current_chain_number) {
                 if (start !== null && end !== null) {
                     geo.vertices.push(new TV3(start.x, start.y, start.z));
                     geo.colors.push(new TCo(start.color));
@@ -1513,7 +1520,7 @@ GLmol.prototype.drawNucleicAcidLine = function (group, atomlist) {
                 end = atom;
             }
             current_resi = atom.resi;
-            current_chaini = atom.chaini;
+            current_chain_number = atom.chain_number;
         }
     }
     if (start !== null && end !== null) {
@@ -1540,7 +1547,7 @@ GLmol.prototype.drawStrandNucleicAcid = function (group, atomlist, num, div, fil
 
     var points = [],
         colors = [],
-        current_chaini,
+        current_chain_number,
         current_resi,
         currentO3,
         prevOO = null,
@@ -1563,7 +1570,7 @@ GLmol.prototype.drawStrandNucleicAcid = function (group, atomlist, num, div, fil
 
             if ((atom.atom === 'O3\'' || atom.atom === 'OP2') && !atom.hetflag) {
                 if (atom.atom === 'O3\'') { // to connect 3' end. FIXME: better way to do?
-                    if (current_chaini !== atom.chaini || current_resi + 1 !== atom.resi) {
+                    if (current_chain_number !== atom.chain_number || current_resi + 1 !== atom.resi) {
                         if (currentO3) {
                             for (j = 0; j < num; j++) {
                                 delta = -1 + 2 / (num - 1) * j;
@@ -1585,7 +1592,7 @@ GLmol.prototype.drawStrandNucleicAcid = function (group, atomlist, num, div, fil
                         prevOO = null;
                     }
                     currentO3 = new TV3(atom.x, atom.y, atom.z);
-                    current_chaini = atom.chaini;
+                    current_chain_number = atom.chain_number;
                     current_resi = atom.resi;
                     colors.push(atom.color);
                 } else { // OP2
@@ -2580,16 +2587,31 @@ GLmol.prototype.parseSelectionToAtomRanges = function(str)
     return match[1].split(",").map(this.parseRange); 
   }
 
-  match = /^\s*resi(due)?\s*([\d-,]+)$/.exec(str);
+  match = /^\s*residue\s*([\d-,]+)$/.exec(str);
   if (match)
   {
     //TODO alexford Update, performs many passes when individual residue numbers are specified.
     var current_mol = this;
-    return match[2].split(",").map(this.parseRange).map(
+    return match[1].split(",").map(this.parseRange).map(
         function (residue_range) {
           var start = residue_range[0], end = residue_range[1];
           atoms_in_range = current_mol.atoms.filter(
                 function (atom) { return (atom.resi < start) | (atom.resi > end); });
+
+          return [atoms_in_range[0].serial, atoms_in_range[atoms_in_range.length - 1].serial]
+        });
+  }
+
+  match = /^\s*residue_number\s*([\d-,]+)$/.exec(str);
+  if (match)
+  {
+    //TODO alexford Update, performs many passes when individual residue numbers are specified.
+    var current_mol = this;
+    return match[1].split(",").map(this.parseRange).map(
+        function (residue_range) {
+          var start = residue_range[0], end = residue_range[1];
+          atoms_in_range = current_mol.atoms.filter(
+                function (atom) { return (atom.residue_number < start) | (atom.residue_number > end); });
 
           return [atoms_in_range[0].serial, atoms_in_range[atoms_in_range.length - 1].serial]
         });
@@ -2652,9 +2674,10 @@ GLmol.prototype.parseSelectionStatement = function(str)
 {
 
   var selection_types = {};
-  selection_types["resi"] = /resi(due)?\s+([\d-,]+)/;
-  selection_types["serial"] = /atomi()?\s+([\d-,]+)/;
-  selection_types["chaini"] = /chaini()?\s+([\d-,]+)/;
+  selection_types["resi"] = /residue\s+([\d-,]+)/;
+  selection_types["residue_number"] = /residue_number\s+([\d-,]+)/;
+  selection_types["serial"] = /atomi\s+([\d-,]+)/;
+  selection_types["chain_number"] = /chain_number\s+([\d-,]+)/;
 
   var entries = str.replace(/^\s\s*/, '').replace(/\s\s*$/, '').split(/\s*;\s*/);
 
@@ -2677,7 +2700,7 @@ GLmol.prototype.parseSelectionStatement = function(str)
         if(!selection_type)
         {
           selection_type = s;
-          sequence = match[2];
+          sequence = match[1];
           is_selection = true;
           break;
         }
