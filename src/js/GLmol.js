@@ -2611,7 +2611,7 @@ GLmol.prototype.parseSelectionToAtomRanges = function(str)
         function (residue_range) {
           var start = residue_range[0], end = residue_range[1];
           atoms_in_range = current_mol.atoms.filter(
-                function (atom) { return (atom.residue_number < start) | (atom.residue_number > end); });
+                function (atom) { return (atom.residue_number >= start) | (atom.residue_number <= end); });
 
           return [atoms_in_range[0].serial, atoms_in_range[atoms_in_range.length - 1].serial]
         });
